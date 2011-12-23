@@ -117,6 +117,9 @@ abstract class MappedEventSubscriber implements EventSubscriber
                     }
                 }
             }
+	        else {
+		        $this->loadMetadataForObjectClass($objectManager, $factory->getMetadataFor($class));
+	        }
         }
         return $config;
     }
