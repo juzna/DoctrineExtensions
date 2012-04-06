@@ -227,7 +227,7 @@ class NestedTreeRepository extends AbstractTreeRepository
      * @param string $sortByField - field name to sort by
      * @param string $direction - sort direction : "ASC" or "DESC"
      * @throws InvalidArgumentException - if input is not valid
-     * @return Doctrine\ORM\QueryBuilder
+     * @return \Doctrine\ORM\QueryBuilder
      */
     public function childrenQueryBuilder($node = null, $direct = false, $sortByField = null, $direction = 'ASC')
     {
@@ -239,7 +239,9 @@ class NestedTreeRepository extends AbstractTreeRepository
             ->from($config['useObjectClass'], 'node')
         ;
         if ($node !== null) {
-            if ($node instanceof $meta->name) {
+// WTF? Seriously? Why you do this to me?
+//            if ($node instanceof $meta->name) {
+// FIXME: should check if has common ancestor which is a base tree node
                 $wrapped = new EntityWrapper($node, $this->_em);
                 if (!$wrapped->hasValidIdentifier()) {
                     throw new InvalidArgumentException("Node is not managed by UnitOfWork");
@@ -261,9 +263,9 @@ class NestedTreeRepository extends AbstractTreeRepository
                     $rootId = $wrapped->getPropertyValue($config['root']);
                     $qb->andWhere("node.{$config['root']} = {$rootId}");
                 }
-            } else {
-                throw new \InvalidArgumentException("Node is not related to this repository");
-            }
+//            } else {
+//                throw new \InvalidArgumentException("Node is not related to this repository");
+//            }
         } else {
             if ($direct) {
                 $qb->where('node.' . $config['parent'] . ' IS NULL');
