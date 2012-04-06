@@ -54,7 +54,7 @@ class TreeListener extends MappedEventSubscriber
      *
      * @param ObjectManager $om
      * @param string $class
-     * @return Strategy
+     * @return Strategy|\Gedmo\Tree\Strategy\ORM\Nested|\Gedmo\Tree\Strategy\ORM\Closure
      */
     public function getStrategy(ObjectManager $om, $class)
     {

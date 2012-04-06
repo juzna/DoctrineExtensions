@@ -11,7 +11,7 @@ abstract class AbstractTreeRepository extends EntityRepository
     /**
      * Tree listener on event manager
      *
-     * @var AbstractTreeListener
+     * @var \Gedmo\Tree\TreeListener
      */
     protected $listener = null;
 

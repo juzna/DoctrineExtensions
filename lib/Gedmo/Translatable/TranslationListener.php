@@ -6,7 +6,12 @@ use Gedmo\Tool\Wrapper\AbstractWrapper;
 use Doctrine\Common\EventArgs,
     Doctrine\Common\Persistence\Mapping\ClassMetadata,
     Gedmo\Mapping\MappedEventSubscriber,
-    Gedmo\Translatable\Mapping\Event\TranslatableAdapter;
+    Gedmo\Translatable\Mapping\Event\TranslatableAdapter,
+	Doctrine\ORM\Tools\ToolEvents;
+use Doctrine\ORM\Tools\Event\GenerateSchemaTableEventArgs,
+	Doctrine\ORM\Tools\Event\GenerateSchemaEventArgs,
+	Nette\Reflection\Method;
+
 
 /**
  * The translation listener handles the generation and
@@ -90,6 +95,16 @@ class TranslationListener extends MappedEventSubscriber
      */
     private $translatedInLocale = array();
 
+
+	public $availableLocales = array();
+	public $defaultLanguage = 'en';
+
+
+	public function __construct(array $locales) {
+		$this->availableLocales = $locales;
+	}
+
+
     /**
      * Specifies the list of events to listen
      *
@@ -101,7 +116,9 @@ class TranslationListener extends MappedEventSubscriber
             'postLoad',
             'postPersist',
             'onFlush',
-            'loadClassMetadata'
+            'loadClassMetadata',
+	        ToolEvents::postGenerateSchemaTable,
+	        ToolEvents::postGenerateSchema,
         );
     }
 
@@ -141,7 +158,23 @@ class TranslationListener extends MappedEventSubscriber
     public function loadClassMetadata(EventArgs $eventArgs)
     {
         $ea = $this->getEventAdapter($eventArgs);
-        $this->loadMetadataForObjectClass($ea->getObjectManager(), $eventArgs->getClassMetadata());
+        $this->loadMetadataForObjectClass($om = $ea->getObjectManager(), $meta = $eventArgs->getClassMetadata());
+
+	    if(!isset($this->configurations[$meta->name])) {
+		    return;
+	    }
+	    $lang = $om->lang ?: $this->defaultLanguage;
+
+	    /** @var \Doctrine\ORM\Mapping\ClassMetadata $meta */
+	    $config = $this->configurations[$meta->name];
+	    if(isset($config['fields'])) foreach($config['fields'] as $field) {
+		    $mapping = &$meta->fieldMappings[$field];
+		    $mapping['columnName'] .= '_' . $lang;
+
+		    $meta->columnNames[$field] .= '_' . $lang;
+		    $meta->fieldNames[$meta->columnNames[$field]] = $field;
+		    bd($mapping);
+	    }
     }
 
     /**
@@ -272,6 +305,7 @@ class TranslationListener extends MappedEventSubscriber
      */
     public function onFlush(EventArgs $args)
     {
+	    /** @var TranslatableAdapter $ea */
         $ea = $this->getEventAdapter($args);
         $om = $ea->getObjectManager();
         $uow = $om->getUnitOfWork();
@@ -345,6 +379,7 @@ class TranslationListener extends MappedEventSubscriber
      */
     public function postLoad(EventArgs $args)
     {
+	    /** @var TranslatableAdapter $ea */
         $ea = $this->getEventAdapter($args);
         $om = $ea->getObjectManager();
         $object = $ea->getObject();
@@ -425,6 +460,7 @@ class TranslationListener extends MappedEventSubscriber
      */
     private function handleTranslatableObjectUpdate(TranslatableAdapter $ea, $object, $isInsert)
     {
+	    return;
         $om = $ea->getObjectManager();
         $wrapped = AbstractWrapper::wrapp($object, $om);
         $meta = $wrapped->getMetadata();
@@ -562,4 +598,37 @@ class TranslationListener extends MappedEventSubscriber
             }
         }
     }
+
+	public function postGenerateSchema(GenerateSchemaEventArgs $ev) {
+
+	}
+
+	public function postGenerateSchemaTable(GenerateSchemaTableEventArgs $ev) {
+		$md = $ev->getClassMetadata();
+		$table = $ev->getClassTable();
+
+		$ea = $this->getEventAdapter($ev);
+		$om = $ea->getObjectManager();
+		$lang = ($om ? $om->lang : null) ?: $this->defaultLanguage;
+
+//		$setName = Method::from('Doctrine\DBAL\Schema\Column', '_setName');
+//		$setName->setAccessible(true);
+
+		if(isset($this->configurations[$md->name]['fields'])) {
+			foreach($this->configurations[$md->name]['fields'] as $field) {
+				$colName = $md->getQuotedColumnName($field, null);
+				$origCol = $table->getColumn($colName);
+				$table->dropColumn($colName);
+
+				$origColName = preg_replace("~_[a-z]{2,3}\$~", '', $origCol->getName()); // FIXME
+
+				foreach($this->availableLocales as $locale) {
+					$col = clone $origCol;
+					$col->resetName($origColName . '_' . $locale);
+
+					$table->addColumnEx($col);
+				}
+			}
+		}
+	}
 }

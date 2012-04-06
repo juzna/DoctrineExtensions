@@ -45,7 +45,7 @@ class Annotation implements AnnotationDriverInterface
     /**
      * Annotation reader instance
      *
-     * @var object
+     * @var \Doctrine\Common\Annotations\Reader|\Doctrine\Common\Annotations\AnnotationReader
      */
     private $reader;
 

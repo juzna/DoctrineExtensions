@@ -48,7 +48,7 @@ class Nested implements Strategy
     /**
      * TreeListener
      *
-     * @var AbstractTreeListener
+     * @var TreeListener
      */
     protected $listener = null;
 
@@ -105,10 +105,14 @@ class Nested implements Strategy
         $this->nodePositions[$oid] = $position;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function processScheduledInsertion($em, $node)
+	/**
+	 * Operations on tree node insertion
+	 *
+	 * @param EntityManager $em
+	 * @param object $node
+	 * @return void
+	 */
+	public function processScheduledInsertion($em, $node)
     {
         $meta = $em->getClassMetadata(get_class($node));
         $config = $this->listener->getConfiguration($em, $meta->name);

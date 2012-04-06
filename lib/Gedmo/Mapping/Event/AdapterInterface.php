@@ -14,6 +14,8 @@ use Doctrine\Common\EventArgs;
  * @subpackage AdapterInterface
  * @link http://www.gediminasm.org
  * @license MIT License (http://www.opensource.org/licenses/mit-license.php)
+ *
+ * @method \Doctrine\Common\Persistence\ObjectManager|\Doctrine\ORM\EntityManager getObjectManager()
  */
 interface AdapterInterface
 {
